@@ -8,57 +8,89 @@ import {
 } from '../redux/user/userSlice';
 
 export default function SignIn() {
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [errors, setErrors] = useState({});
   const { loading, error } = useSelector((state) => state.user);
   const navigate = useNavigate();
   const dispatch = useDispatch();
+
+  const validate = () => {
+    const newErrors = {};
+    if (!formData.email) newErrors.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = 'Email is invalid';
+
+    if (!formData.password) newErrors.password = 'Password is required';
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.id]: e.target.value,
     });
   };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (!validate()) return;
+
+    dispatch(signInStart());
+
     try {
-      dispatch(signInStart());
-      const res = await fetch('/api/auth/signin', {
+      const response = await fetch('/api/auth/signin', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
       });
-      const data = await res.json();
-      console.log(data);
-      if (data.success === false) {
-        dispatch(signInFailure(data.message));
-        return;
+
+      if (!response.ok) {
+        const errorMessage = `HTTP error! Status: ${response.status}`;
+        throw new Error(errorMessage);
       }
-      dispatch(signInSuccess(data));
-      navigate('/');
+
+      const data = await response.json();
+      console.log('API Response:', data);
+
+      if (data && data._id) {
+        dispatch(signInSuccess(data));
+        navigate('/');
+      } else {
+        throw new Error('Unexpected response format');
+      }
     } catch (error) {
+      console.error('Sign-in Error:', error.message);
       dispatch(signInFailure(error.message));
     }
   };
+
   return (
     <div className='p-3 max-w-lg mx-auto'>
       <h1 className='text-3xl text-center font-semibold my-7'>Sign In</h1>
       <form onSubmit={handleSubmit} className='flex flex-col gap-4'>
         <input
           type='email'
-          placeholder='email'
+          placeholder='Email'
           className='border p-3 rounded-lg'
           id='email'
+          value={formData.email}
           onChange={handleChange}
         />
+        {errors.email && <p className='text-red-500'>{errors.email}</p>}
+        
         <input
           type='password'
-          placeholder='password'
+          placeholder='Password'
           className='border p-3 rounded-lg'
           id='password'
+          value={formData.password}
           onChange={handleChange}
         />
+        {errors.password && <p className='text-red-500'>{errors.password}</p>}
 
         <button
           disabled={loading}
@@ -68,7 +100,7 @@ export default function SignIn() {
         </button>
       </form>
       <div className='flex gap-2 mt-5'>
-        <p>Dont have an account?</p>
+        <p>Don't have an account?</p>
         <Link to={'/signup'}>
           <span className='text-blue-700'>Sign up</span>
         </Link>
