@@ -29,7 +29,7 @@ export default function SignIn() {
       });
 
       if (!res.ok) {
-        throw new Error('Invalid credentials.');
+        throw new Error('User Not found.');
       }
 
       const data = await res.json();
