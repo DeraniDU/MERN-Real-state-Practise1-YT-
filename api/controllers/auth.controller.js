@@ -1,64 +1,85 @@
-import User from '../models/user.model.js';
-import bcryptjs from 'bcryptjs';
-import { errorHandler } from '../utils/error.js';
-import jwt from 'jsonwebtoken';
+import User from "../models/user.model.js";
+import bcryptjs from "bcryptjs";
+import { errorhandler } from "../utils/error.js";
+import jwt from "jsonwebtoken";
+
+
+// signup controller function to create a new user in the database and return a success message 
 
 export const signup = async (req, res, next) => {
-  const { username, email, password } = req.body;
-  const hashedPassword = bcryptjs.hashSync(password, 10);
-  const newUser = new User({ username, email, password: hashedPassword });
+  const { name, email, contact, gender, username, password } = req.body;
+  const hashedPassword = await bcryptjs.hash(password, 10);
+  const newUser = new User({ 
+    name, 
+    email, 
+    contact, 
+    gender, 
+    username, 
+    password: hashedPassword });
   try {
     await newUser.save();
-    res.status(201).json('User created successfully!');
+    res.status(200).json({ message: "Signup successful" });
+
   } catch (error) {
     next(error);
   }
 };
 
+// signin controller function to authenticate a user and return a success message
+
 export const signin = async (req, res, next) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
   try {
-    const validUser = await User.findOne({ email });
-    if (!validUser) return next(errorHandler(404, 'User not found!'));
+    const validUser = await User.findOne({ username });
+    if (!validUser) return next(errorhandler(401, "Username not found"));
+
     const validPassword = bcryptjs.compareSync(password, validUser.password);
-    if (!validPassword) return next(errorHandler(401, 'Wrong credentials!'));
-    const token = jwt.sign({ id: validUser._id }, process.env.JWT_SECRET);
-    const { password: pass, ...rest } = validUser._doc;
-    res
-      .cookie('access_token', token, { httpOnly: true })
+    if (!validPassword) return next(errorhandler(405, "Invalid password"));
+    
+    const token = jwt.sign({ userId: validUser._id }, process.env.JWT_SECRET);
+
+
+    const { password: userPassword, ...rest } = validUser._doc;
+    res.cookie('access_token', token, { httpOnly: true })
       .status(200)
-      .json(rest);
+      .json(validUser);
+
   } catch (error) {
     next(error);
+
   }
+
 };
+
+// google controller function to authenticate a user using google and return a success message
 
 export const google = async (req, res, next) => {
   try {
     const user = await User.findOne({ email: req.body.email });
     if (user) {
-      const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET);
-      const { password: pass, ...rest } = user._doc;
+      const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET);
+      const { password: userPassword, ...rest } = user._doc;
       res
         .cookie('access_token', token, { httpOnly: true })
         .status(200)
         .json(rest);
+
     } else {
-      const generatedPassword =
-        Math.random().toString(36).slice(-8) +
-        Math.random().toString(36).slice(-8);
+      const generatedPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
       const hashedPassword = bcryptjs.hashSync(generatedPassword, 10);
       const newUser = new User({
-        username:
-          req.body.name.split(' ').join('').toLowerCase() +
-          Math.random().toString(36).slice(-4),
-        email: req.body.email,
+        name: req.body.name
+          .split(" ")
+          .join("")
+          .toLowerCase() 
+          + Math.random().toString(36).slice(-4),
+        email: req.body.email,        
         password: hashedPassword,
         avatar: req.body.photo,
       });
       await newUser.save();
-      const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET);
-      const { password: pass, ...rest } = newUser._doc;
+      const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET);
+      const { password: userPassword, ...rest } = newUser._doc;
       res
         .cookie('access_token', token, { httpOnly: true })
         .status(200)
@@ -69,11 +90,16 @@ export const google = async (req, res, next) => {
   }
 };
 
-export const signOut = async (req, res, next) => {
+// signout controller function to clear the cookie and return a success message
+
+export const signout = (req, res, next) => {
   try {
     res.clearCookie('access_token');
-    res.status(200).json('User has been logged out!');
+    res.status(200).json({ message: "Signout successful" });
+    
   } catch (error) {
     next(error);
   }
 };
+
+
