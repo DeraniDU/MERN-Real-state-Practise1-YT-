@@ -117,16 +117,3 @@ Contributions are welcome! Follow these steps to contribute:
    git push origin feature-name
    ```
 5. **Submit a pull request** for review.
-
----
-
-## 📜 License
-
-This project is licensed under the [MIT License](LICENSE).
-
----
-
-## 📞 Contact
-
-For any questions, feedback, or inquiries, reach out to [dilandilruksha0@gmail.com](mailto:dilandilruksha0@gmail.com).  
-Let’s build an awesome real estate community together! 🌟
